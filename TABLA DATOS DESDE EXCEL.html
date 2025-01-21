@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tabla datos grados</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .filter-container {
+      margin-bottom: 20px;
+    }
+    select {
+      margin-right: 10px;
+      padding: 5px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f4f4f4;
+    }
+  </style>
+</head>
+<body>
+  <h1>Tabla con Filtros desde Excel</h1>
+
+  <div class="filter-container">
+    <label for="filter-comunidad">Comunidad:</label>
+    <select id="filter-comunidad" onchange="applyFilters()">
+      <option value="">Todas</option>
+    </select>
+
+    <label for="filter-grado">Grado:</label>
+    <select id="filter-grado" onchange="applyFilters()">
+      <option value="">Todos</option>
+    </select>
+
+    <label for="filter-ano">Año:</label>
+    <select id="filter-ano" onchange="applyFilters()">
+      <option value="">Todos</option>
+    </select>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>COMUNIDAD</th>
+        <th>GRADO</th>
+        <th>AÑO</th>
+        <th>Nombre</th>
+        <th>Correo</th>
+        <th>Teléfono</th>
+      </tr>
+    </thead>
+    <tbody id="table-body">
+      <!-- Los datos se insertarán aquí dinámicamente -->
+    </tbody>
+  </table>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      loadExcelData();
+    });
+
+    function loadExcelData() {
+      fetch('datos.xlsx')
+        .then(response => response.blob())
+        .then(blob => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+            populateTable(jsonData);
+            populateFilters(jsonData);
+          };
+          reader.readAsArrayBuffer(blob);
+        });
+    }
+
+    function populateTable(data) {
+      const tableBody = document.getElementById('table-body');
+      tableBody.innerHTML = '';
+
+      data.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${row.COMUNIDAD}</td>
+          <td>${row.GRADO}</td>
+          <td>${row.AÑO}</td>
+          <td>${row.Nombre}</td>
+          <td>${row.Correo}</td>
+          <td>${row.Teléfono}</td>
+        `;
+        tableBody.appendChild(tr);
+      });
+    }
+
+    function populateFilters(data) {
+      const comunidades = new Set(data.map(row => row.COMUNIDAD));
+      const grados = new Set(data.map(row => row.GRADO));
+      const anos = new Set(data.map(row => row.AÑO));
+
+      fillSelect("filter-comunidad", comunidades);
+      fillSelect("filter-grado", grados);
+      fillSelect("filter-ano", anos);
+    }
+
+    function fillSelect(filterId, values) {
+      const select = document.getElementById(filterId);
+      Array.from(values)
+        .sort()
+        .forEach(value => {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = value;
+          select.appendChild(option);
+        });
+    }
+
+    function applyFilters() {
+      const comunidadFilter = document.getElementById("filter-comunidad").value;
+      const gradoFilter = document.getElementById("filter-grado").value;
+      const anoFilter = document.getElementById("filter-ano").value;
+
+      const tableRows = document.querySelectorAll("#table-body tr");
+
+      tableRows.forEach(row => {
+        const comunidad = row.cells[0].textContent;
+        const grado = row.cells[1].textContent;
+        const ano = row.cells[2].textContent;
+
+        if (
+          (comunidadFilter === "" || comunidad === comunidadFilter) &&
+          (gradoFilter === "" || grado === gradoFilter) &&
+          (anoFilter === "" || ano === anoFilter)
+        ) {
+          row.style.display = "";
+        } else {
+          row.style.display = "none";
+        }
+      });
+    }
+  </script>
+</body>
+</html>
